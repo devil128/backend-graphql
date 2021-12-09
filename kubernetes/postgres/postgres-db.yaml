@@ -1,0 +1,44 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql-images-db
+  namespace: syse
+spec:
+  serviceName: postgresql-images-db
+  selector:
+    matchLabels:
+      app: postgresql-images-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql-images-db
+    spec:
+      containers:
+        - name: postgresql-db
+          image: postgres:latest
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /data
+              name: postgredb
+          env:
+            - name: POSTGRES_PASSWORD
+              value: password
+            - name: PGDATA
+              value: /data/pgdata
+          resources:
+            requests:
+              cpu: "0.1"
+  # Volume Claim
+  volumeClaimTemplates:
+    - metadata:
+        name: postgredb
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 3Gi
+

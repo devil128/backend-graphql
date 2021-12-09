@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    hikari:
+      connection-timeout: 20000
+      maximum-pool-size: 5
+    url: "jdbc:postgresql://postgres-images-service.syse.svc.cluster.local:5432/postgres"
+    username: postgres
+    password: password
+
+  jpa:
+    generate-ddl: true
+    properties:
+      hibernate:
+        schema_update:
+          unique_constraint_strategy: RECREATE_QUIETLY
