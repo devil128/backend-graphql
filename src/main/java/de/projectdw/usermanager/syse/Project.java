@@ -10,7 +10,21 @@ import javax.persistence.*;
 public class Project {
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private long id;
+    long id;
     long userId;
     String projectName;
+
+    public Project(String projectName) {
+        this.projectName = projectName;
+    }
+
+    public Project() {
+
+    }
+
+    public boolean isUserInProject(long userID){
+        return this.userId == userID;
+    }
+
+
 }

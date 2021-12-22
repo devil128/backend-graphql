@@ -11,12 +11,26 @@ public class Image {
     int width;
     int height;
     Date uploaded;
-    String filename;
-    String generatedFileName;
     //https://www.bezkoder.com/spring-boot-upload-file-database/
     String contentType;
     @Lob
     byte[] file;
     @OneToOne
     Project project;
+
+    public Image(int width, int height, Date uploaded, byte[] file, Project project) {
+        this.width = width;
+        this.height = height;
+        this.uploaded = uploaded;
+        this.file = file;
+        this.project = project;
+    }
+
+    public Image() {
+
+    }
+
+    public Project getProject(){
+        return project;
+    }
 }

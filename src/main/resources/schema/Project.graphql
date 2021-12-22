@@ -1,0 +1,15 @@
+type Project {
+    id : ID!
+    projectName: String!
+    userID: ID!
+}
+
+extend type QueryResolver{
+    projects:[Project]
+    projectsByUserID(id: ID!): [Project]
+}
+
+extend type Mutation{
+    newProject(projectname: String!): Project
+}
+

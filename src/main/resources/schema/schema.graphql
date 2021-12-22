@@ -2,3 +2,10 @@
 type User{
     name: String
 }
+
+
+
+schema {
+    query:QueryResolver
+    mutation: Mutation
+}

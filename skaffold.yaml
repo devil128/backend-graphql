@@ -1,18 +1,18 @@
-apiVersion: skaffold/v2beta14
+
+apiVersion: skaffold/v2beta25
 kind: Config
 metadata:
   name: log-distributor
 build:
   artifacts:
-    - image: registry.projectdw.de/syse-usermanager
-      context: .
-      jib:
-        project: de.projectdw:UserManager
-        args: [ -DskipTests ]
-        type: maven
+  - image: registry.projectdw.de/syse-usermanager
+    context: .
+    jib:
+      project: de.projectdw:UserManager
+      args:
+      - -DskipTests
+      type: maven
 deploy:
   kubectl:
     manifests:
-      - kubernetes/service/deployment.yaml
-
-
+    - kubernetes/service/deployment.yaml
