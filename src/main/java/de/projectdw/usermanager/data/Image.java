@@ -1,4 +1,4 @@
-package de.projectdw.usermanager.syse;
+package de.projectdw.usermanager.data;
 
 import javax.persistence.*;
 import java.util.Date;

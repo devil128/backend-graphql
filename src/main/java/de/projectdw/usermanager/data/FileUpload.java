@@ -1,4 +1,4 @@
-package de.projectdw.usermanager.syse;
+package de.projectdw.usermanager.data;
 
 public class FileUpload {
     private String contentType;

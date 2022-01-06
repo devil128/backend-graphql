@@ -1,4 +1,4 @@
-package de.projectdw.usermanager.syse;
+package de.projectdw.usermanager.data;
 
 import com.netflix.graphql.dgs.DgsScalar;
 import graphql.schema.Coercing;

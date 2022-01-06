@@ -5,8 +5,7 @@ import com.netflix.graphql.dgs.DgsData;
 
 import com.netflix.graphql.dgs.InputArgument;
 import com.netflix.graphql.dgs.context.DgsContext;
-import com.sun.xml.bind.v2.TODO;
-import de.projectdw.usermanager.syse.*;
+import de.projectdw.usermanager.data.*;
 import graphql.schema.DataFetchingEnvironment;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
@@ -30,9 +29,6 @@ public class UserServiceApplication {
     private ProjectRepository projectRepository;
     @Autowired
     private ImageRepository imageRepository;
-    @Autowired
-    private ProjectContextBuilder projectContextBuilder;
-
 
 
 
@@ -42,21 +38,16 @@ public class UserServiceApplication {
 
     @DgsData(parentType = "Mutation", field = "newProject")
     public Project createProject(DataFetchingEnvironment dfe) throws IOException {
-
             Project pro = new Project(dfe.getArgument("projectname"));
             projectRepository.save(pro);
             long projectID = pro.getId();
             return pro;
-
-
     }
 
     @DgsData(parentType = "Mutation", field = "uploadImage")
-    public void uploudImage(DataFetchingEnvironment dfe) throws IOException {
-
+    public void uploadImage(DataFetchingEnvironment dfe) throws IOException {
         Project pro = new Project(dfe.getArgument("projectname"));
         FileUpload image = dfe.getArgument("inputImage");
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
         ByteArrayInputStream bis = new ByteArrayInputStream(image.getContent());
         BufferedImage bImage = ImageIO.read(bis);
         Image data = new Image(bImage.getWidth(), bImage.getHeight(), new Date(), image.getContent(), pro);
@@ -67,21 +58,13 @@ public class UserServiceApplication {
     @DgsData(parentType = "QueryResolver", field = "projects")
     public List<Project> findAllProjects() {
         List<Project> projects = (List<Project>) projectRepository.findAll();
-        projectContextBuilder.withProjects(projects).build();
+
         return projects;
     }
 
     @DgsData(parentType = "QueryResolver", field = "projectsByUserID")
     public List<Project> findAllProjectsForUser(@InputArgument("id") Long userID, DataFetchingEnvironment dfe) {
-       ProjectContext projectContext = DgsContext.getCustomContext(dfe);
-        List<Project> projects = projectContext.getProjectList();
-        List<Project> result = new ArrayList<Project>();
-        for(Project i: projects){
-            if(i.isUserInProject(userID)){
-                result.add(i);
-            }
-        }
-        return result;
+        return projectRepository.getProjectsByUserId(userID);
     }
 
     @DgsData(parentType = "QueryResolver", field = "imagesInProject")
@@ -94,7 +77,7 @@ public class UserServiceApplication {
                 result.add(i);
             }
         }
-        return result;
+        return images;
     }
 
     @DgsData(parentType = "QueryResolver", field = "imageUnlabeledInProject")

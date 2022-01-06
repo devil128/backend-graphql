@@ -1,4 +1,4 @@
-package de.projectdw.usermanager.syse;
+package de.projectdw.usermanager.data;
 
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
