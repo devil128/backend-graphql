@@ -18,6 +18,9 @@ type QueryResolver {
 
 scalar FileUpload
 
+
+
 type Mutation{
     uploadImage(projectname: String!, inputImage: FileUpload!): Image
+
 }

@@ -29,6 +29,8 @@ public class UserServiceApplication {
     private ProjectRepository projectRepository;
     @Autowired
     private ImageRepository imageRepository;
+    @Autowired
+    private LabelRepository labelRepository;
 
 
 
@@ -55,6 +57,20 @@ public class UserServiceApplication {
 
     }
 
+    @DgsData(parentType = "Mutation", field = "uploadLabel")
+    public void uploadLabel(DataFetchingEnvironment dfe) {
+        Long imageID =  dfe.getArgument("imageID");
+        int x1  =  dfe.getArgument("x1");
+        int y1  =  dfe.getArgument("y1");
+        int x2  =  dfe.getArgument("x2");
+        int y2  =  dfe.getArgument("y2");
+        Image image = imageRepository.getImageById(imageID);
+        labelRepository.save(new Label(image,x1,x2,y1,y2));
+
+
+
+    }
+
     @DgsData(parentType = "QueryResolver", field = "projects")
     public List<Project> findAllProjects() {
         List<Project> projects = (List<Project>) projectRepository.findAll();
@@ -69,15 +85,7 @@ public class UserServiceApplication {
 
     @DgsData(parentType = "QueryResolver", field = "imagesInProject")
     public List<Image> findAllImagesInProject(@InputArgument("projectname") String projectname, DataFetchingEnvironment dfe) {
-        ImageContext imageContext = DgsContext.getCustomContext(dfe);
-        List<Image> images = imageContext.getImageList();
-        List<Image> result = new ArrayList<Image>();
-        for(Image i: images){
-            if(i.getProject().getProjectName().equals(projectname)){
-                result.add(i);
-            }
-        }
-        return images;
+        return imageRepository.getImagesByProject(projectRepository.getProjectByProjectNameEquals(projectname));
     }
 
     @DgsData(parentType = "QueryResolver", field = "imageUnlabeledInProject")
