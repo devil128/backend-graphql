@@ -22,7 +22,7 @@ spec:
             - containerPort: 5432
           volumeMounts:
             - mountPath: /data
-              name: postgredb
+              name: postgresdb
           env:
             - name: POSTGRES_PASSWORD
               value: password
@@ -34,7 +34,7 @@ spec:
   # Volume Claim
   volumeClaimTemplates:
     - metadata:
-        name: postgredb
+        name: postgresdb
       spec:
         accessModes: [ "ReadWriteOnce" ]
         storageClassName: longhorn

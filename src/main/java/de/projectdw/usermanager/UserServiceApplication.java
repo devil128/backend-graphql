@@ -1,28 +1,38 @@
 package de.projectdw.usermanager;
 
-import com.netflix.graphql.dgs.DgsComponent;
-import com.netflix.graphql.dgs.DgsData;
+import com.google.api.gax.rpc.UnauthenticatedException;
+import com.netflix.graphql.dgs.*;
+import com.netflix.graphql.dgs.DgsData.*;
 
-import com.netflix.graphql.dgs.InputArgument;
-import com.netflix.graphql.dgs.context.DgsContext;
-import de.projectdw.usermanager.data.*;
+import de.projectdw.sysedataclasses.data.*;
+import de.projectdw.sysedataclasses.repos.ImageFileRepository;
+import de.projectdw.sysedataclasses.utils.UtilFunction;
+import de.projectdw.usermanager.repos.*;
+import de.projectdw.usermanager.services.UtilService;
+import de.projectdw.usermanager.util.LabelInput;
 import graphql.schema.DataFetchingEnvironment;
+import lombok.SneakyThrows;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.transaction.Transactional;
+import javax.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"de.projectdw.sysedataclasses", "de.projectdw.usermanager"})
 @DgsComponent
 public class UserServiceApplication {
     @Autowired
@@ -31,90 +41,98 @@ public class UserServiceApplication {
     private ImageRepository imageRepository;
     @Autowired
     private LabelRepository labelRepository;
-
-
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    ImageFileRepository imageFileRepository;
+    @Autowired
+    UtilService utilService;
 
     public static void main(String[] args) {
         SpringApplication.run(UserServiceApplication.class, args);
     }
 
-    @DgsData(parentType = "Mutation", field = "newProject")
-    public Project createProject(DataFetchingEnvironment dfe) throws IOException {
-            Project pro = new Project(dfe.getArgument("projectname"));
-            projectRepository.save(pro);
-            long projectID = pro.getId();
-            return pro;
-    }
-
+    @PreAuthorize("authentication.principal.uid != null")
     @DgsData(parentType = "Mutation", field = "uploadImage")
-    public void uploadImage(DataFetchingEnvironment dfe) throws IOException {
-        Project pro = new Project(dfe.getArgument("projectname"));
-        FileUpload image = dfe.getArgument("inputImage");
-        ByteArrayInputStream bis = new ByteArrayInputStream(image.getContent());
+    @Transactional
+    public Image uploadImage(String projectName, @InputArgument("inputImage") MultipartFile image, DataFetchingEnvironment dfe) throws IOException {
+        Project project = utilService.getProject(projectName);
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(image.getBytes());
         BufferedImage bImage = ImageIO.read(bis);
-        Image data = new Image(bImage.getWidth(), bImage.getHeight(), new Date(), image.getContent(), pro);
-        imageRepository.save(data);
-
+        Image data = new Image(bImage.getWidth(), bImage.getHeight(), new Date(), image.getBytes(), project);
+        imageFileRepository.save(data.getFile());
+        data.setContentType(image.getContentType());
+        data = imageRepository.save(data);
+        return data;
     }
 
-    @DgsData(parentType = "Mutation", field = "uploadLabel")
-    public void uploadLabel(DataFetchingEnvironment dfe) {
-        Long imageID =  dfe.getArgument("imageID");
-        int x1  =  dfe.getArgument("x1");
-        int y1  =  dfe.getArgument("y1");
-        int x2  =  dfe.getArgument("x2");
-        int y2  =  dfe.getArgument("y2");
-        Image image = imageRepository.getImageById(imageID);
-        labelRepository.save(new Label(image,x1,x2,y1,y2));
+    @PreAuthorize("authentication.principal.uid != null")
+    @Transactional
+    @DgsData(parentType = "Image", field = "data")
+    public String imageData(DataFetchingEnvironment dfe) {
+        Image img = dfe.getSource();
 
-
-
+        return img.getData();
     }
 
-    @DgsData(parentType = "QueryResolver", field = "projects")
-    public List<Project> findAllProjects() {
-        List<Project> projects = (List<Project>) projectRepository.findAll();
+    @DgsMutation(field = "uploadLabel")
+    @PreAuthorize("authentication.principal.uid != null")
+    @SneakyThrows
+    public boolean uploadLabel(@InputArgument(collectionType = LabelInput.class) List<LabelInput> labels, DataFetchingEnvironment dfe) {
+        User user = utilService.getUserInformation();
+        var projects = user.getProjects();
+        projects.addAll(user.getMemberProjects());
+        for (LabelInput labelInput : labels) {
+            Image image = imageRepository.getImageById(labelInput.getImageID());
+            if (image == null)
+                throw new AccessDeniedException("Image by id %s not found".formatted(labelInput.getImageID()));
+            if (!projects.contains(image.getProject()))
+                throw new AccessDeniedException("Cant upload labels to a project which is not owned by you");
 
-        return projects;
-    }
-
-    @DgsData(parentType = "QueryResolver", field = "projectsByUserID")
-    public List<Project> findAllProjectsForUser(@InputArgument("id") Long userID, DataFetchingEnvironment dfe) {
-        return projectRepository.getProjectsByUserId(userID);
-    }
-
-    @DgsData(parentType = "QueryResolver", field = "imagesInProject")
-    public List<Image> findAllImagesInProject(@InputArgument("projectname") String projectname, DataFetchingEnvironment dfe) {
-        return imageRepository.getImagesByProject(projectRepository.getProjectByProjectNameEquals(projectname));
-    }
-
-    @DgsData(parentType = "QueryResolver", field = "imageUnlabeledInProject")
-    public Image findImageUnlabeledInProject(@InputArgument("projectname") String projectname, DataFetchingEnvironment dfe) {
-        List<Image> imagesInProject = findAllImagesInProject(projectname,dfe);
-        for(Image i: imagesInProject){
-            if(i.getProject().getProjectName().equals(projectname)){
-                //TODO Logic to find unlabeled Image
-                return i;
-            }
+            labelRepository.save(new Label(image, labelInput.getX1(), labelInput.getX2(), labelInput.getY1(), labelInput.getY2()));
+            image.setFinished(true);
+            imageRepository.save(image);
         }
-        return null;
+        return true;
+
     }
 
 
-
-
-
-
-    @DgsData(parentType = "QueryResolver", field = "image")
-    public Optional<Image> getImageByID(@InputArgument("id") long ID){
-        return imageRepository.findById(ID);
+    @DgsQuery(field = "imagesInProject")
+    @PreAuthorize("authentication.principal.uid != null")
+    @Transactional
+    public List<Image> findAllImagesInProject(@InputArgument("projectName") String projectName, DataFetchingEnvironment dfe) {
+        User user = utilService.getUserInformation();
+        Project project = utilService.getProject(projectName);
+        System.out.println(project);
+        if (user.getProjects().contains(project) || user.getMemberProjects().contains(project))
+            return imageRepository.getImagesByProject(project);
+        throw new AccessDeniedException("Can´t find images for a not owned project");
     }
 
+    @DgsQuery(field = "imageUnlabeledInProject")
+    @Transactional
+    @PreAuthorize("authentication.principal.uid != null")
+    public Image findImageUnlabeledInProject(@InputArgument() String projectName, DataFetchingEnvironment dfe) {
+        List<Image> imagesInProject = findAllImagesInProject(projectName, dfe);
 
+        return imagesInProject.stream().filter(image -> !image.isFinished()).collect(Collectors.toList()).stream().findAny().orElse(null);
+    }
 
-
-
-
+    @DgsQuery(field = "image")
+    @SneakyThrows
+    @PreAuthorize("authentication.principal.uid != null")
+    public Image getImageByID(@InputArgument("id") long ID) {
+        User user = utilService.getUserInformation();
+        Image image = imageRepository.findById(ID).orElse(null);
+        if (image == null)
+            return null;
+        User owner = image.getProject().getOwner();
+        if (!owner.equals(user) && !user.getMemberProjects().contains(image.getProject()))
+            throw new Exception("You are not added to this project");
+        return image;
+    }
 
 
 }

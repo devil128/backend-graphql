@@ -1,11 +1,59 @@
 
-type User{
-    name: String
+type User @key(fields: "id") @extends{
+    id: ID! @external
+
+
 }
 
+type Project @key(fields: "id") @extends{
+    id : ID! @external
+    imagesTotal: Int
+    imagesClassified: Int
 
+}
+
+input LabelInput {
+    imageID : Int!
+    x1 : Int!
+    x2 : Int!
+    y1 : Int!
+    y2 : Int!
+}
+type Label {
+    imageID : Int!
+    x1 : Int!
+    x2 : Int!
+    y1 : Int!
+    y2 : Int!
+}
+
+type Image {
+    id : ID!
+    width: Int
+    height: Int
+    uploaded: String
+    contentType: String
+    project: ID!
+    data: String
+}
+
+type Query {
+    images: [Image]
+    image(id: ID!): Image!
+    imagesInProject(projectName: String!): [Image]
+    imageUnlabeledInProject(projectName: String!): Image
+    projectInformation:[Project]
+    projectsByUserID(id: ID!): [Project]
+    getImage(id: ID!): Upload
+}
+
+type Mutation{
+    uploadImage(projectName: String!, inputImage: Upload!): Image
+    uploadLabel(labels: [LabelInput]) : Boolean
+}
 
 schema {
-    query:QueryResolver
+    query: Query
     mutation: Mutation
 }
+scalar Upload

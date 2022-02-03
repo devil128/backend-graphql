@@ -2,7 +2,7 @@
 apiVersion: skaffold/v2beta25
 kind: Config
 metadata:
-  name: log-distributor
+  name: user-service
 build:
   artifacts:
   - image: registry.projectdw.de/syse-usermanager
