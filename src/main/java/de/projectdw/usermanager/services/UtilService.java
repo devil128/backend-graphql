@@ -13,6 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -31,8 +32,8 @@ public class UtilService {
     @NotNull
     public Project getProject(String projectName) {
         User user = getUserInformation();
-        List<Project> userProjects = user.getProjects();
-        userProjects.addAll(user.getMemberProjects());
+        List<Project> userProjects = new ArrayList<>(user.getProjects());
+        userProjects.addAll(new ArrayList<>(user.getMemberProjects()));
         Project selectedProject = userProjects.stream().filter(project -> project.getProjectName().equals(projectName)).findFirst().orElse(null);
         if (selectedProject == null) {
             Project project = new Project(projectName);
@@ -48,7 +49,9 @@ public class UtilService {
     public User getUserInformation() {
         User user = UtilFunction.getAuthUser();
         User dbUser = userRepository.findUserByUid(user.getUid());
+
         if (dbUser == null) {
+            user.initFromFirebase();
             dbUser = userRepository.save(user);
         }
         return dbUser;

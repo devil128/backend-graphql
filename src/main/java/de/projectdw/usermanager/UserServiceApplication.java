@@ -24,12 +24,9 @@ import javax.transaction.Transactional;
 import javax.validation.constraints.NotNull;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.util.Date;
+import java.util.*;
 
 import java.awt.image.BufferedImage;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @SpringBootApplication(scanBasePackages = {"de.projectdw.sysedataclasses", "de.projectdw.usermanager"})
@@ -81,7 +78,7 @@ public class UserServiceApplication {
     @SneakyThrows
     public boolean uploadLabel(@InputArgument(collectionType = LabelInput.class) List<LabelInput> labels, DataFetchingEnvironment dfe) {
         User user = utilService.getUserInformation();
-        var projects = user.getProjects();
+        ArrayList<Project> projects = new ArrayList<>(user.getProjects());
         projects.addAll(user.getMemberProjects());
         for (LabelInput labelInput : labels) {
             Image image = imageRepository.getImageById(labelInput.getImageID());
@@ -98,6 +95,26 @@ public class UserServiceApplication {
 
     }
 
+
+
+
+    @DgsQuery(field = "labels")
+    @PreAuthorize("authentication.principal.uid != null")
+    @Transactional
+    public List<Label> getLabels(@InputArgument("projectName") String projectName, DataFetchingEnvironment dfe) {
+        User user = utilService.getUserInformation();
+        Project project = utilService.getProject(projectName);
+        System.out.println(project);
+        if (user.getProjects().contains(project) || user.getMemberProjects().contains(project)){
+            var images = imageRepository.getImagesByProject(project);
+            List<Label> labels = new ArrayList<>();
+            for(Image image : images){
+                labels.addAll(labelRepository.getLabelsByImage(image));
+            }
+            return labels;
+        }
+        throw new AccessDeniedException("Can´t find images for a not owned project");
+    }
 
     @DgsQuery(field = "imagesInProject")
     @PreAuthorize("authentication.principal.uid != null")

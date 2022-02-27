@@ -20,7 +20,7 @@ input LabelInput {
     y2 : Int!
 }
 type Label {
-    imageID : Int!
+    id : Int!
     x1 : Int!
     x2 : Int!
     y1 : Int!
@@ -41,10 +41,12 @@ type Query {
     images: [Image]
     image(id: ID!): Image!
     imagesInProject(projectName: String!): [Image]
+    labels(projectName: String!): [Label]
     imageUnlabeledInProject(projectName: String!): Image
     projectInformation:[Project]
     projectsByUserID(id: ID!): [Project]
     getImage(id: ID!): Upload
+
 }
 
 type Mutation{
